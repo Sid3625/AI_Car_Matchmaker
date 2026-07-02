@@ -1,7 +1,10 @@
 import { UserPreferences, RecommendationResult, Car } from '../types';
 
+// Use environment variable for production (Render backend), fallback to local proxy for dev
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+
 export async function fetchRecommendations(prefs: UserPreferences): Promise<RecommendationResult[]> {
-  const response = await fetch('/api/recommend', {
+  const response = await fetch(`${API_BASE}/recommend`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -18,7 +21,7 @@ export async function fetchRecommendations(prefs: UserPreferences): Promise<Reco
 }
 
 export async function fetchCars(filters?: { fuel?: string; transmission?: string; bodyType?: string }): Promise<Car[]> {
-  let url = '/api/cars';
+  let url = `${API_BASE}/cars`;
   if (filters) {
     const params = new URLSearchParams();
     if (filters.fuel) params.append('fuel', filters.fuel);
@@ -36,7 +39,7 @@ export async function fetchCars(filters?: { fuel?: string; transmission?: string
 }
 
 export async function fetchCarById(id: string): Promise<Car> {
-  const response = await fetch(`/api/cars/${id}`);
+  const response = await fetch(`${API_BASE}/cars/${id}`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
@@ -45,7 +48,7 @@ export async function fetchCarById(id: string): Promise<Car> {
 }
 
 export async function parseQueryToPrefs(query: string): Promise<UserPreferences> {
-  const response = await fetch('/api/ai/parse', {
+  const response = await fetch(`${API_BASE}/ai/parse`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
