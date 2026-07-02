@@ -79,14 +79,7 @@ function App() {
           <span className="brand-logo">🚗</span>
           <span className="brand-name">AI Car Matchmaker</span>
         </div>
-        <div className="connection-status">
-          {backendOnline === null && <span className="conn-dot loading"></span>}
-          {backendOnline === true && <span className="conn-dot online" title="Backend Connected"></span>}
-          {backendOnline === false && <span className="conn-dot offline" title="Backend Disconnected"></span>}
-          <span className="conn-text">
-            {backendOnline === true ? 'API Active' : 'Connecting...'}
-          </span>
-        </div>
+
       </header>
 
       {/* Dynamic Notifications */}
