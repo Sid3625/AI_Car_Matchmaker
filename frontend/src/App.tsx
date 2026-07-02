@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Landing from './components/Landing';
 import Questionnaire from './components/Questionnaire';
 import ShortlistDashboard from './components/ShortlistDashboard';
@@ -14,18 +14,7 @@ function App() {
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [results, setResults] = useState<RecommendationResult[]>([]);
   const [errorMsg, setErrorMsg] = useState<string>('');
-  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [aiNotification, setAiNotification] = useState<string | null>(null);
-
-  // Check backend health status on mount
-  useEffect(() => {
-    fetch('/api/health')
-      .then(res => {
-        if (res.ok) setBackendOnline(true);
-        else setBackendOnline(false);
-      })
-      .catch(() => setBackendOnline(false));
-  }, []);
 
   const handleStartQuiz = () => {
     setAiParsedPrefs(null);
