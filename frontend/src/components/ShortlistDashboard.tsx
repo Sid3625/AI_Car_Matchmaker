@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { RecommendationResult, UserPreferences } from '../types';
 import CarCard from './CarCard';
 import ComparisonGrid from './ComparisonGrid';
