@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { RecommendationResult } from '../types';
 
 interface ComparisonGridProps {
