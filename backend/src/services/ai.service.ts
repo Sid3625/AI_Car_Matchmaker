@@ -1,74 +1,99 @@
-import { UserPreferences } from '../types';
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+import { GoogleGenAI, Type } from "@google/genai";
+import { UserPreferences } from "../types";
 
 /**
  * Parses user natural language query into structured UserPreferences.
  */
-export async function parseQueryToPreferences(query: string): Promise<UserPreferences> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY environment variable is not configured.');
+export async function parseQueryToPreferences(
+  query: string
+): Promise<UserPreferences> {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY environment variable is not configured.");
   }
 
-  const prompt = `
-Analyze this natural language query from a user describing their car preferences for the Indian market and parse it into the requested JSON schema.
+  const ai = new GoogleGenAI({
+    apiKey,
+  });
 
-User query: "${query}"
+  const prompt = `
+Analyze this natural language query from a user describing their car preferences for the Indian market and parse it into JSON.
+
+User query:
+"${query}"
 
 Guidelines:
 - budgetMin: Minimum budget in lakhs INR. Default to 4 if not specified.
 - budgetMax: Maximum budget in lakhs INR. Default to 35 if not specified.
-- transmission: Must be 'Manual', 'Automatic', or 'Any'. Default to 'Any' if not specified.
-- seatingNeeded: Must be 5 or 7. If they mention family size >= 6 or explicitly say "7-seater/6-seater", choose 7. Otherwise, default to 5.
-- useCase: Choose the closest fit from: 'Daily Commuting', 'Family Trips', 'Adventure/Off-road', 'Tech & Luxury'.
-- priority: Choose the closest fit from: 'Fuel Economy', 'Safety', 'Performance', 'Comfort', 'Features'.
+- transmission: Must be "Manual", "Automatic", or "Any". Default to "Any".
+- seatingNeeded: Must be 5 or 7.
+  - If family size >= 6 or user explicitly mentions 6/7-seater -> 7
+  - Otherwise -> 5
+- useCase:
+  - Daily Commuting
+  - Family Trips
+  - Adventure/Off-road
+  - Tech & Luxury
+- priority:
+  - Fuel Economy
+  - Safety
+  - Performance
+  - Comfort
+  - Features
+
+Return ONLY valid JSON.
 `;
 
-  const payload = {
-    contents: [
-      {
-        parts: [
-          { text: prompt }
-        ]
-      }
-    ],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: 'OBJECT',
-        properties: {
-          budgetMin: { type: 'NUMBER' },
-          budgetMax: { type: 'NUMBER' },
-          transmission: { type: 'STRING', enum: ['Manual', 'Automatic', 'Any'] },
-          seatingNeeded: { type: 'INTEGER' },
-          useCase: { type: 'STRING', enum: ['Daily Commuting', 'Family Trips', 'Adventure/Off-road', 'Tech & Luxury'] },
-          priority: { type: 'STRING', enum: ['Fuel Economy', 'Safety', 'Performance', 'Comfort', 'Features'] }
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            budgetMin: {
+              type: Type.NUMBER,
+            },
+            budgetMax: {
+              type: Type.NUMBER,
+            },
+            transmission: {
+              type: Type.STRING,
+            },
+            seatingNeeded: {
+              type: Type.INTEGER,
+            },
+            useCase: {
+              type: Type.STRING,
+            },
+            priority: {
+              type: Type.STRING,
+            },
+          },
+          required: [
+            "budgetMin",
+            "budgetMax",
+            "transmission",
+            "seatingNeeded",
+            "useCase",
+            "priority",
+          ],
         },
-        required: ['budgetMin', 'budgetMax', 'transmission', 'seatingNeeded', 'useCase', 'priority']
-      }
+      },
+    });
+
+    const text = response.text;
+
+    if (!text) {
+      throw new Error("Gemini returned an empty response.");
     }
-  };
 
-  const response = await fetch(GEMINI_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Gemini API returned status: ${response.status}`);
+    return JSON.parse(text) as UserPreferences;
+  } catch (error) {
+    console.error("Gemini Error:", error);
+    throw new Error("Failed to parse user preferences using Gemini.");
   }
-
-  const data = await response.json();
-  const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  
-  if (!textContent) {
-    throw new Error('Gemini API returned an empty response.');
-  }
-
-  const parsedPrefs: UserPreferences = JSON.parse(textContent);
-  return parsedPrefs;
 }

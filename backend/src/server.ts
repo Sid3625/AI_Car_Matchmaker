@@ -1,3 +1,10 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load env from project root relative to this server file
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config(); // Fallback to current directory .env if any
+
 import express from 'express';
 import cors from 'cors';
 import matchRoutes from './routes/match.routes';
