@@ -3,16 +3,19 @@ import Landing from './components/Landing';
 import Questionnaire from './components/Questionnaire';
 import ShortlistDashboard from './components/ShortlistDashboard';
 import { UserPreferences, RecommendationResult } from './types';
-import { fetchRecommendations } from './services/api';
+import { fetchRecommendations, parseQueryToPrefs } from './services/api';
 
 type AppState = 'landing' | 'questionnaire' | 'loading' | 'results' | 'error';
 
 function App() {
   const [state, setState] = useState<AppState>('landing');
   const [prefs, setPrefs] = useState<UserPreferences | null>(null);
+  const [aiParsedPrefs, setAiParsedPrefs] = useState<UserPreferences | null>(null);
+  const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [results, setResults] = useState<RecommendationResult[]>([]);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
+  const [aiNotification, setAiNotification] = useState<string | null>(null);
 
   // Check backend health status on mount
   useEffect(() => {
@@ -25,7 +28,25 @@ function App() {
   }, []);
 
   const handleStartQuiz = () => {
+    setAiParsedPrefs(null);
     setState('questionnaire');
+  };
+
+  const handleAISearch = async (query: string) => {
+    setAiLoading(true);
+    setAiNotification(null);
+    try {
+      const parsed = await parseQueryToPrefs(query);
+      setAiParsedPrefs(parsed);
+      setState('questionnaire');
+    } catch (err: any) {
+      console.error('AI Parsing failed:', err);
+      setAiNotification('⚠️ AI search failed or API key missing. Let\'s do it manually instead!');
+      setAiParsedPrefs(null);
+      setState('questionnaire');
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const handleQuizSubmit = async (selectedPrefs: UserPreferences) => {
@@ -44,7 +65,9 @@ function App() {
 
   const handleReset = () => {
     setPrefs(null);
+    setAiParsedPrefs(null);
     setResults([]);
+    setAiNotification(null);
     setState('landing');
   };
 
@@ -66,12 +89,30 @@ function App() {
         </div>
       </header>
 
+      {/* Dynamic Notifications */}
+      {aiNotification && (
+        <div className="global-notification" onClick={() => setAiNotification(null)}>
+          {aiNotification}
+          <span className="close-notif">×</span>
+        </div>
+      )}
+
       {/* Main Page Area */}
       <main className="content-area">
-        {state === 'landing' && <Landing onStart={handleStartQuiz} />}
+        {state === 'landing' && (
+          <Landing 
+            onStart={handleStartQuiz} 
+            onAISearch={handleAISearch} 
+            aiLoading={aiLoading} 
+          />
+        )}
 
         {state === 'questionnaire' && (
-          <Questionnaire onSubmit={handleQuizSubmit} onBackToLanding={handleReset} />
+          <Questionnaire 
+            onSubmit={handleQuizSubmit} 
+            onBackToLanding={handleReset} 
+            initialPrefs={aiParsedPrefs}
+          />
         )}
 
         {state === 'loading' && (

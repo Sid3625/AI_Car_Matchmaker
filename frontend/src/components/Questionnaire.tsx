@@ -4,6 +4,7 @@ import { UserPreferences } from '../types';
 interface QuestionnaireProps {
   onSubmit: (prefs: UserPreferences) => void;
   onBackToLanding: () => void;
+  initialPrefs?: UserPreferences | null;
 }
 
 const BUDGET_PRESETS = [
@@ -32,20 +33,43 @@ const USE_CASES = [
 ];
 
 const PRIORITIES = [
-  { value: 'Fuel Economy', label: 'Fuel Economy / Range', icon: '⛽', desc: 'Maximize mileage, low monthly running costs' },
+  { value: 'Fuel Economy', label: 'Fuel Economy / Range', icon: '⛽', desc: 'Maximize mileage, low running costs' },
   { value: 'Safety', label: 'Crash Safety Rating', icon: '🛡️', desc: 'High GNCAP star ratings and rigid construction' },
   { value: 'Performance', label: 'Engine Power & BHP', icon: '⚡', desc: 'Peppy acceleration and solid highway overtaking' },
   { value: 'Comfort', label: 'Cabin Space & Ride Quality', icon: '🛋️', desc: 'Plush suspension and sofa-like seats' },
   { value: 'Features', label: 'Modern Features & Tech', icon: '📲', desc: 'Sunroof, touchscreens, connected-car tech' }
 ];
 
-export default function Questionnaire({ onSubmit, onBackToLanding }: QuestionnaireProps) {
+// Helper to map parsed budgets to closest index
+const findBudgetPresetIdx = (min: number, max: number) => {
+  const foundIdx = BUDGET_PRESETS.findIndex(p => p.min === min && p.max === max);
+  if (foundIdx !== -1) return foundIdx;
+  
+  // Find preset containing the max value
+  const closest = BUDGET_PRESETS.findIndex(p => max <= p.max);
+  return closest !== -1 ? closest : 1;
+};
+
+export default function Questionnaire({ onSubmit, onBackToLanding, initialPrefs }: QuestionnaireProps) {
   const [step, setStep] = useState(1);
-  const [budgetIdx, setBudgetIdx] = useState<number | null>(null);
-  const [transmission, setTransmission] = useState<'Manual' | 'Automatic' | 'Any'>('Any');
-  const [seating, setSeating] = useState<number>(5);
-  const [useCase, setUseCase] = useState<string>('Daily Commuting');
-  const [priority, setPriority] = useState<string>('Safety');
+  const [budgetIdx, setBudgetIdx] = useState<number | null>(() => {
+    if (initialPrefs) {
+      return findBudgetPresetIdx(initialPrefs.budgetMin, initialPrefs.budgetMax);
+    }
+    return null;
+  });
+  const [transmission, setTransmission] = useState<'Manual' | 'Automatic' | 'Any'>(() => {
+    return initialPrefs?.transmission || 'Any';
+  });
+  const [seating, setSeating] = useState<number>(() => {
+    return initialPrefs?.seatingNeeded || 5;
+  });
+  const [useCase, setUseCase] = useState<string>(() => {
+    return initialPrefs?.useCase || 'Daily Commuting';
+  });
+  const [priority, setPriority] = useState<string>(() => {
+    return initialPrefs?.priority || 'Safety';
+  });
 
   const handleNext = () => {
     if (step === 1 && budgetIdx === null) return;
@@ -76,6 +100,13 @@ export default function Questionnaire({ onSubmit, onBackToLanding }: Questionnai
 
   return (
     <div className="quiz-container">
+      {/* AI Pre-populate Banner */}
+      {initialPrefs && (
+        <div className="ai-populate-banner">
+          🪄 AI pre-populated options from your prompt. Feel free to review & modify them!
+        </div>
+      )}
+
       {/* Step Indicator */}
       <div className="step-header">
         <span className="step-text">STEP {step} OF 4</span>

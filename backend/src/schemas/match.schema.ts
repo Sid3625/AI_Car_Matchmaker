@@ -20,3 +20,7 @@ export const CarsQuerySchema = z.object({
   transmission: z.string().optional(),
   bodyType: z.string().optional()
 });
+
+export const AIParseRequestSchema = z.object({
+  query: z.string({ required_error: 'Query string is required' }).min(5, 'Query must be at least 5 characters long')
+});

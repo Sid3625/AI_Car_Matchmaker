@@ -43,3 +43,20 @@ export async function fetchCarById(id: string): Promise<Car> {
 
   return response.json();
 }
+
+export async function parseQueryToPrefs(query: string): Promise<UserPreferences> {
+  const response = await fetch('/api/ai/parse', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ query })
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.error || `Failed to parse AI query.`);
+  }
+
+  return response.json();
+}

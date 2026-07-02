@@ -18,12 +18,32 @@ export default function ComparisonGrid({ items, onRemove, onClose }: ComparisonG
     );
   }
 
+  // Helper to determine the "better" value across compared items
+  // Returns the value itself so we can check equality
+  const getBestValue = (key: 'price' | 'mileage' | 'safety' | 'power' | 'bootSpace') => {
+    if (items.length < 2) return null; // Only highlight when comparing 2 or more cars
+    const values = items.map(item => item.car[key]);
+    if (key === 'price') {
+      return Math.min(...values); // Lower price is better
+    }
+    return Math.max(...values); // Higher value is better
+  };
+
+  const bestPrice = getBestValue('price');
+  const bestMileage = getBestValue('mileage');
+  const bestSafety = getBestValue('safety');
+  const bestPower = getBestValue('power');
+  const bestBoot = getBestValue('bootSpace');
+
   return (
     <div className="compare-overlay">
       <div className="compare-window">
         {/* Header */}
         <div className="compare-header">
-          <h2>Compare Shortlisted Cars</h2>
+          <div>
+            <h2>Compare Shortlisted Cars</h2>
+            <span className="compare-legend">🟢 Highlighted cells represent the best value among compared cars</span>
+          </div>
           <button className="btn-close-compare" onClick={onClose}>Close Comparison</button>
         </div>
 
@@ -59,11 +79,17 @@ export default function ComparisonGrid({ items, onRemove, onClose }: ComparisonG
               {/* Price */}
               <tr>
                 <td className="attribute-label sticky-col">Price</td>
-                {items.map((item) => (
-                  <td key={item.car.id} className="highlight-cell">
-                    ₹{item.car.price.toFixed(2)} Lakh
-                  </td>
-                ))}
+                {items.map((item) => {
+                  const isBest = bestPrice !== null && item.car.price === bestPrice;
+                  return (
+                    <td 
+                      key={item.car.id} 
+                      className={`highlight-cell ${isBest ? 'better-value-highlight' : ''}`}
+                    >
+                      ₹{item.car.price.toFixed(2)} Lakh {isBest && <span className="best-tag">Best Value</span>}
+                    </td>
+                  );
+                })}
               </tr>
               {/* Fuel */}
               <tr>
@@ -89,32 +115,62 @@ export default function ComparisonGrid({ items, onRemove, onClose }: ComparisonG
               {/* Mileage */}
               <tr>
                 <td className="attribute-label sticky-col">Mileage / Range</td>
-                {items.map((item) => (
-                  <td key={item.car.id}>
-                    {item.car.mileage} {item.car.fuel === 'Electric' ? 'km/charge' : 'kmpl'}
-                  </td>
-                ))}
+                {items.map((item) => {
+                  const isBest = bestMileage !== null && item.car.mileage === bestMileage;
+                  return (
+                    <td 
+                      key={item.car.id}
+                      className={isBest ? 'better-value-highlight' : ''}
+                    >
+                      {item.car.mileage} {item.car.fuel === 'Electric' ? 'km/charge' : 'kmpl'}
+                    </td>
+                  );
+                })}
               </tr>
               {/* Safety */}
               <tr>
                 <td className="attribute-label sticky-col">Safety Rating</td>
-                {items.map((item) => (
-                  <td key={item.car.id}>{item.car.safety}★ GNCAP</td>
-                ))}
+                {items.map((item) => {
+                  const isBest = bestSafety !== null && item.car.safety === bestSafety;
+                  return (
+                    <td 
+                      key={item.car.id}
+                      className={isBest ? 'better-value-highlight' : ''}
+                    >
+                      {item.car.safety}★ GNCAP
+                    </td>
+                  );
+                })}
               </tr>
               {/* Power */}
               <tr>
                 <td className="attribute-label sticky-col">Power (BHP)</td>
-                {items.map((item) => (
-                  <td key={item.car.id}>{item.car.power} bhp</td>
-                ))}
+                {items.map((item) => {
+                  const isBest = bestPower !== null && item.car.power === bestPower;
+                  return (
+                    <td 
+                      key={item.car.id}
+                      className={isBest ? 'better-value-highlight' : ''}
+                    >
+                      {item.car.power} bhp
+                    </td>
+                  );
+                })}
               </tr>
               {/* Boot Space */}
               <tr>
                 <td className="attribute-label sticky-col">Boot Space</td>
-                {items.map((item) => (
-                  <td key={item.car.id}>{item.car.bootSpace} Litres</td>
-                ))}
+                {items.map((item) => {
+                  const isBest = bestBoot !== null && item.car.bootSpace === bestBoot;
+                  return (
+                    <td 
+                      key={item.car.id}
+                      className={isBest ? 'better-value-highlight' : ''}
+                    >
+                      {item.car.bootSpace} Litres
+                    </td>
+                  );
+                })}
               </tr>
               {/* Seating */}
               <tr>
