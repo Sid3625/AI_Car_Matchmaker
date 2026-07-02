@@ -1,81 +1,102 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import Landing from './components/Landing';
+import Questionnaire from './components/Questionnaire';
+import ShortlistDashboard from './components/ShortlistDashboard';
+import { UserPreferences, RecommendationResult } from './types';
+import { fetchRecommendations } from './services/api';
 
-interface HealthData {
-  status: string;
-  timestamp: string;
-}
+type AppState = 'landing' | 'questionnaire' | 'loading' | 'results' | 'error';
 
 function App() {
-  const [health, setHealth] = useState<HealthData | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<AppState>('landing');
+  const [prefs, setPrefs] = useState<UserPreferences | null>(null);
+  const [results, setResults] = useState<RecommendationResult[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
 
-  const checkHealth = async () => {
-    setLoading(true);
-    setError(null);
+  // Check backend health status on mount
+  useEffect(() => {
+    fetch('/api/health')
+      .then(res => {
+        if (res.ok) setBackendOnline(true);
+        else setBackendOnline(false);
+      })
+      .catch(() => setBackendOnline(false));
+  }, []);
+
+  const handleStartQuiz = () => {
+    setState('questionnaire');
+  };
+
+  const handleQuizSubmit = async (selectedPrefs: UserPreferences) => {
+    setPrefs(selectedPrefs);
+    setState('loading');
     try {
-      const response = await fetch('/api/health');
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setHealth(data);
+      const data = await fetchRecommendations(selectedPrefs);
+      setResults(data);
+      setState('results');
     } catch (err: any) {
-      console.error('Error fetching health status:', err);
-      setError(err.message || 'Failed to connect to backend server');
-      setHealth(null);
-    } finally {
-      setLoading(false);
+      console.error(err);
+      setErrorMsg(err.message || 'Failed to generate recommendations. Please try again.');
+      setState('error');
     }
   };
 
-  useEffect(() => {
-    checkHealth();
-  }, []);
+  const handleReset = () => {
+    setPrefs(null);
+    setResults([]);
+    setState('landing');
+  };
 
   return (
-    <div className="app-container">
-      <div className="card">
-        <div className="logo-icon">🚗</div>
-        <h1 className="title">AI Car Matchmaker</h1>
-        <p className="subtitle">MVP Workspace Verification</p>
+    <div className="main-viewport">
+      {/* Global Brand Header */}
+      <header className="global-header">
+        <div className="header-brand" onClick={handleReset}>
+          <span className="brand-logo">🚗</span>
+          <span className="brand-name">AI Car Matchmaker</span>
+        </div>
+        <div className="connection-status">
+          {backendOnline === null && <span className="conn-dot loading"></span>}
+          {backendOnline === true && <span className="conn-dot online" title="Backend Connected"></span>}
+          {backendOnline === false && <span className="conn-dot offline" title="Backend Disconnected"></span>}
+          <span className="conn-text">
+            {backendOnline === true ? 'API Active' : 'Connecting...'}
+          </span>
+        </div>
+      </header>
 
-        {loading && (
-          <div className="status-badge loading">
-            <span className="pulse-dot"></span>
-            Connecting to Backend...
+      {/* Main Page Area */}
+      <main className="content-area">
+        {state === 'landing' && <Landing onStart={handleStartQuiz} />}
+
+        {state === 'questionnaire' && (
+          <Questionnaire onSubmit={handleQuizSubmit} onBackToLanding={handleReset} />
+        )}
+
+        {state === 'loading' && (
+          <div className="loader-container">
+            <div className="spinner"></div>
+            <h3>Analyzing Vehicle Specifications...</h3>
+            <p>Matching parameters and compiling your shortlist.</p>
           </div>
         )}
 
-        {!loading && health && (
-          <div>
-            <div className="status-badge online">
-              <span className="pulse-dot"></span>
-              Backend Online
-            </div>
-            <div className="info-box">
-              <div>Status: {health.status}</div>
-              <div>Timestamp: {health.timestamp}</div>
-              <div>Endpoint: /api/health</div>
-            </div>
-          </div>
+        {state === 'results' && prefs && (
+          <ShortlistDashboard results={results} prefs={prefs} onReset={handleReset} />
         )}
 
-        {!loading && error && (
-          <div>
-            <div className="status-badge offline">
-              <span className="pulse-dot"></span>
-              Connection Failed
-            </div>
-            <div className="info-box" style={{ color: 'var(--accent-error)' }}>
-              Error: {error}
-            </div>
-            <button className="btn-retry" onClick={checkHealth}>
-              Retry Connection
+        {state === 'error' && (
+          <div className="error-screen">
+            <span className="error-icon">⚠️</span>
+            <h2>Matchmaking Error</h2>
+            <p>{errorMsg}</p>
+            <button className="btn-primary" onClick={handleReset}>
+              Return to Home
             </button>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
